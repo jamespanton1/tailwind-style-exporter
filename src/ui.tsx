@@ -1,7 +1,10 @@
-import { render, IconToggleButton, Button, TextboxMultiline } from '@create-figma-plugin/ui'
+import { render, SegmentedControl, SegmentedControlOption} from '@create-figma-plugin/ui'
 import { h } from 'preact'
 import { useState, useEffect } from 'preact/hooks'
 import '!./output.css'
+import ControlBar from './components/ControlBar'
+import StyleTable from './components/StyleTable'
+import CssDisplay from './components/CssDisplay'
 
 function rgbToHex(r: number, g: number, b: number): string {
   return '#' + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, '0')).join('');
@@ -11,6 +14,8 @@ function Plugin() {
   const [styleData, setStyleData] = useState<any[] | null>(null)
   const [toggledStyleIds, setToggledStyleIds] = useState<string[]>([])
   const [cssContent, setCssContent] = useState<string>('')
+  const [primaryStyleId, setPrimaryStyleId] = useState<string | null>(null)
+  const [view, SetView] = useState<string>("Styles")
 
   useEffect(() => {
     console.log('Updated styleData:', styleData)
@@ -24,6 +29,9 @@ function Plugin() {
       setStyleData(prevStyleData => {
         if (prevStyleData) {
           return prevStyleData.map(style => {
+            if (primaryStyleId === style.id) {
+              return { ...style, newColor: selectedColor, isPrimary: true }
+            }
             if (response.styleIds.includes(style.id)) {
               return { ...style, newColor: selectedColor }
             }
@@ -96,15 +104,37 @@ function Plugin() {
     })
   }
 
+  const handleMakePrimary = (style: any) => {
+    setStyleData(prevStyleData => {
+      return prevStyleData?.map(s => {
+        if (s.id === style.id) {
+          return { ...s, isPrimary: true };
+        }
+        return { ...s, isPrimary: false };
+      }) ?? [];
+    });
+    setPrimaryStyleId(style.id);
+  }
+
   const handleExport = () => {
     const stylesToExport = styleData?.filter(style => style.newColor) || [];
+    const primaryStyle = styleData?.find(style => style.isPrimary);
+    if (primaryStyle) {
+      stylesToExport.push({
+        ...primaryStyle,
+        name: 'primary',
+        isPrimary: true
+      });
+    }
     parent.postMessage({ pluginMessage: { type: 'export-styles', styles: stylesToExport } }, '*');
-  }
+  };
 
   useEffect(() => {
     const handleCssContent = (event: MessageEvent) => {
       if (event.data.pluginMessage.type === 'css-content') {
         setCssContent(event.data.pluginMessage.content);
+        // Automatically switch to the CSS view when content is received
+        SetView('Css');
       }
     };
 
@@ -112,57 +142,44 @@ function Plugin() {
     return () => window.removeEventListener('message', handleCssContent);
   }, []);
 
+  const handleViewChange = (event: any) => {
+    const newVale = event.target.value
+    SetView(newVale)
+  }
+
+  const options: Array<SegmentedControlOption> = [{
+    value: 'Styles'
+  }, {
+    value: 'Css',
+    disabled: !cssContent
+  }];
+
   return (
-    <div>
-      <h1 className="text-3xl font-bold underline">
-        Color Styles Scanner
-      </h1>
+    <div class='p-4'>
+      <div class='mb-3'>
+        <SegmentedControl onChange={handleViewChange} options={options} value={view} />
+      </div>
       {styleData ? (
         <div>
-          <ul>
-            {styleData.map((style) => (
-              <li key={style.id}>
-                {style.name}: {style.color} 
-                {style.newColor && ` → ${style.newColor}`}
-                {!style.newColor ? (
-                  <IconToggleButton
-                    value={toggledStyleIds.includes(style.id)}
-                    onChange={() => handleToggledStyles(style)}
-                  >
-                    Tick
-                  </IconToggleButton>
-                ) : (
-                  <Button onClick={() => handleUnlinkStyle(style)}>
-                    Unlink
-                  </Button>
-                )}
-              </li>
-            ))}
-          </ul>
-          <Button onClick={handleExport}>
-            Export Styles
-          </Button>
-          {cssContent && (
-            <div>
-              <h2>Generated CSS:</h2>
-              <TextboxMultiline
-                value={cssContent}
-                readOnly
-                rows={10}
-                variant="border"
-                style={{ width: '100%', marginTop: '10px' }}
-              />
-            </div>
+          {view === 'Styles' && (
+            <StyleTable 
+              styles={styleData} 
+              onMakePrimary={handleMakePrimary}
+              toggledStyleIds={toggledStyleIds}
+              onToggleStyle={handleToggledStyles}
+              onUnlinkStyle={handleUnlinkStyle}
+            />
+          )}
+          {view === 'Css' && cssContent && (
+            <CssDisplay cssContent={cssContent} />
           )}
         </div>
       ) : (
         <div>
           <p>Start by scanning styles</p>
-          <Button onClick={scanStyles}>
-            Scan Styles
-          </Button>
         </div>
       )}
+      <ControlBar onScan={scanStyles} onExport={handleExport} styles={styleData} />
     </div>
   )
 }

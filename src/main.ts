@@ -2,8 +2,8 @@ import { showUI } from '@create-figma-plugin/utilities'
 
 export default function () {
   showUI({
-    height: 300,
-    width: 240
+    height: 400,
+    width: 400
   })
 
   const toggledStyleIds: string[] = []

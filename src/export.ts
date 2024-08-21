@@ -60,6 +60,7 @@ export function generateCssFromStyles(styleData: any[]): string {
     '.text-primary-700', '.bg-primary-700', '.fill-primary-700', '.border-primary-700',
     '.text-primary-800', '.bg-primary-800', '.fill-primary-800', '.border-primary-800',
     '.text-primary-900', '.bg-primary-900', '.fill-primary-900', '.border-primary-900',
+    '.text-primary', '.bg-primary', '.fill-primary', '.border-primary',
   ]
   
   let cssContent = '/* Updated Tailwind Color Styles */\n\n';
@@ -84,10 +85,10 @@ export function generateCssFromStyles(styleData: any[]): string {
   console.log('colorMap:', Object.fromEntries(colorMap));
 
   exsitingTailwindCss.forEach(className => {
-    const [, colorType, colorName, shade] = className.match(/\.(text|bg|fill|border)-(\w+)-(\d+)/) || [];
-    if (colorType && colorName && shade) {
-      const fullColorName = `${colorName}-${shade}`;
-      const newColor = colorMap.get(fullColorName);
+    const [, colorType, colorName, shade] = className.match(/\.(text|bg|fill|border)-(\w+)(?:-(\d+))?/) || [];
+    if (colorType && colorName) {
+      const fullColorName = shade ? `${colorName}-${shade}` : colorName;
+      const newColor = colorMap.get(fullColorName) || (colorName === 'primary' ? colorMap.get('primary') : undefined);
       if (newColor) {
         switch (colorType) {
           case 'text':
