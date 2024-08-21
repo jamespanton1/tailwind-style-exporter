@@ -16,7 +16,7 @@ export default function () {
         id: style.id,
         color: style.paints[0]
       }))
-      figma.ui.postMessage(colourStyles)
+      figma.ui.postMessage({ type: 'styles-scanned', styles: colourStyles })
     }
 
     if (msg.type === 'toggled-styles') {

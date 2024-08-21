@@ -19,6 +19,9 @@ function Plugin() {
 
   useEffect(() => {
     console.log('Updated styleData:', styleData)
+    if (styleData && styleData.some(style => style.newColor)) {
+      handleExport()
+    }
   }, [styleData])
 
   const handleMessage = (event: MessageEvent) => {
@@ -42,20 +45,24 @@ function Plugin() {
       })
       // Remove toggles
       setToggledStyleIds([])
-    } else {
-      const styles = handleStyles(response)
+    } else if (response.type === 'styles-scanned') {
+      const styles = handleStyles(response.styles)
       setStyleData(styles)
       console.log('Updated style data:', styles)
     }
   }
 
   useEffect(() => {
+    // Scan styles when the component mounts
+    scanStyles();
+
+    // Set up event listener for messages
     window.addEventListener('message', handleMessage)
 
     return () => {
       window.removeEventListener('message', handleMessage)
     }
-  }, [toggledStyleIds])
+  }, [])
 
   const handleStyles = (response: any) => {
     let styles: any[] = []
@@ -116,6 +123,17 @@ function Plugin() {
     setPrimaryStyleId(style.id);
   }
 
+  const handleClear = () => {
+    // remove newColor from StyleData
+    setStyleData(prevStyleData => {
+      return prevStyleData?.map(s => {
+        return { ...s, newColor: null }
+      }) ?? []
+    })
+    setCssContent('')
+  }
+
+
   const handleExport = () => {
     const stylesToExport = styleData?.filter(style => style.newColor) || [];
     const primaryStyle = styleData?.find(style => style.isPrimary);
@@ -134,7 +152,6 @@ function Plugin() {
       if (event.data.pluginMessage.type === 'css-content') {
         setCssContent(event.data.pluginMessage.content);
         // Automatically switch to the CSS view when content is received
-        SetView('Css');
       }
     };
 
@@ -179,7 +196,7 @@ function Plugin() {
           <p>Start by scanning styles</p>
         </div>
       )}
-      <ControlBar onScan={scanStyles} onExport={handleExport} styles={styleData} />
+      <ControlBar onScan={scanStyles} onClear={handleClear} styles={styleData} />
     </div>
   )
 }
