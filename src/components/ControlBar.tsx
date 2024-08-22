@@ -9,7 +9,7 @@ interface ControlBarProps {
 }
 
 const ControlBar: FC<ControlBarProps> = ({ onScan, onClear, styles }) => (
-  <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 flex gap-3">
+  <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 flex gap-3 z-10">
     <Button onClick={onScan}>Rescan Styles</Button>
     {styles && styles.length > 0 && styles.some(style => style.newColor) && <Button onClick={onClear}>Clear</Button>}
   </div>
